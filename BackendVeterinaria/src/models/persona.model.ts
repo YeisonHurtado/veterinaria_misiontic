@@ -57,16 +57,6 @@ export class Persona extends Entity {
   })
   direccion_residencia: string;
 
-  @property({
-    type: 'string',
-  })
-  empleadoId?: string;
-
-  @property({
-    type: 'string',
-  })
-  clienteAmoId?: string;
-
   constructor(data?: Partial<Persona>) {
     super(data);
   }

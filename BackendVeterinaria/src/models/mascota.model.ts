@@ -1,4 +1,4 @@
-import {Entity, model, property, belongsTo} from '@loopback/repository';
+import {belongsTo, Entity, model, property} from '@loopback/repository';
 import {ClienteAmo} from './cliente-amo.model';
 
 @model()
@@ -26,6 +26,12 @@ export class Mascota extends Entity {
     type: 'string',
   })
   raza?: string;
+
+  @property({
+    type: 'string',
+    required: true,
+  })
+  sexo: string;
 
   @property({
     type: 'number',
