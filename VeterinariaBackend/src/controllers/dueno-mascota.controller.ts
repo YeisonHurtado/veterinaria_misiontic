@@ -46,7 +46,7 @@ export class DuenoMascotaController {
   ) {
     let dm = await this.servicioAutenticacion.IdentificarDuenoMascota(credenciales.Usuario, credenciales.Clave);
     if (dm) {
-      let token = this.servicioAutenticacion.GenerarTokenJWT(dm);
+      let token = this.servicioAutenticacion.GenerarTokenJWT_DM(dm);
       return{
         datos: {
           nombre: dm.Nombres,

@@ -17,9 +17,10 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
 import { Llaves } from '../config/llaves';
-import {MedicoVeterinario} from '../models';
+import {Credenciales, MedicoVeterinario} from '../models';
 import {MedicoVeterinarioRepository} from '../repositories';
 import { AutenticacionService } from '../services';
 const fetch = require('node-fetch');
@@ -31,6 +32,33 @@ export class MedicoVeterinarioController {
     @service(AutenticacionService)
     public servicioAutenticacion : AutenticacionService,
   ) {}
+
+  @post('/identificarMedicoVeterinario', {
+    responses:{
+      '200':{
+        description: "Identificación de usuarios"
+      }
+    }
+  })
+  async identificarMedicoVeterinario(
+    @requestBody() credenciales: Credenciales
+  ) {
+    let mv = await this.servicioAutenticacion.IdentificarMedicoVeterinario(credenciales.Usuario, credenciales.Clave);
+    if (mv) {
+      let token = this.servicioAutenticacion.GenerarTokenJWT_MV(mv);
+      return{
+        datos: {
+          nombre: mv.Nombres,
+          correo: mv.Correo,
+          id: mv.Id
+        },
+        tk: token
+      }
+    } else {
+      throw new HttpErrors[401]("Datos inválidos");
+    }
+  }
+
 
   @post('/medico-veterinarios')
   @response(200, {

@@ -1,3 +1,4 @@
+import { service } from '@loopback/core';
 import {
   Count,
   CountSchema,
@@ -16,15 +17,47 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
-import {AsistenteVeterinaria} from '../models';
+import { Llaves } from '../config/llaves';
+import {AsistenteVeterinaria, Credenciales} from '../models';
 import {AsistenteVeterinariaRepository} from '../repositories';
+import { AutenticacionService } from '../services';
+const fetch = require('node-fetch');
 
 export class AsistenteVeterinariaController {
   constructor(
     @repository(AsistenteVeterinariaRepository)
     public asistenteVeterinariaRepository : AsistenteVeterinariaRepository,
+    @service(AutenticacionService)
+    public servicioAutenticacion : AutenticacionService
   ) {}
+
+  @post('/identificarAsistenteVeterinaria', {
+    responses:{
+      '200':{
+        description: "Identificación de usuarios"
+      }
+    }
+  })
+  async identificarAsistenteVeterinaria(
+    @requestBody() credenciales: Credenciales
+  ) {
+    let av = await this.servicioAutenticacion.IdentificarAsistenteVeterinaria(credenciales.Usuario, credenciales.Clave);
+    if (av) {
+      let token = this.servicioAutenticacion.GenerarTokenJWT_AV(av);
+      return{
+        datos: {
+          nombre: av.Nombres,
+          correo: av.Correo,
+          id: av.Id
+        },
+        tk: token
+      }
+    } else {
+      throw new HttpErrors[401]("Datos inválidos");
+    }
+  }
 
   @post('/asistente-veterinarias')
   @response(200, {
@@ -44,7 +77,21 @@ export class AsistenteVeterinariaController {
     })
     asistenteVeterinaria: Omit<AsistenteVeterinaria, 'Id'>,
   ): Promise<AsistenteVeterinaria> {
-    return this.asistenteVeterinariaRepository.create(asistenteVeterinaria);
+
+    let clave = this.servicioAutenticacion.GenerarClave();
+    let claveCifrada = this.servicioAutenticacion.CifrarClave(clave);
+    asistenteVeterinaria.Clave = claveCifrada;
+    let av = await this.asistenteVeterinariaRepository.create(asistenteVeterinaria);
+
+    //Notificar al usuario
+    let destino = asistenteVeterinaria.Correo;
+    let asunto = 'Resgistro en la plataforma AnimalPets';
+    let contenido = `Hola señor@ ${asistenteVeterinaria.Nombres}, estas son sus credenciales de ingreso. El Usuario: ${asistenteVeterinaria.Correo} y la Contraseña: ${clave}`;
+    fetch(`${Llaves.urlServicioNotificaciones}/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenido}`)
+      .then((data: any) => {
+        console.log(data);
+      })
+    return av;
   }
 
   @get('/asistente-veterinarias/count')
