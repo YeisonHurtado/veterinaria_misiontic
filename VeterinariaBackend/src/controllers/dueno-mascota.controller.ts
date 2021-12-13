@@ -22,7 +22,7 @@ import {
 import {DuenoMascota} from '../models';
 import { Credenciales } from '../models/credenciales.model';
 import {DuenoMascotaRepository} from '../repositories';
-import { AutenticacionService } from '../services';
+import { AutenticacionService, NotificacionService } from '../services';
 import { Llaves } from '../config/llaves';
 const fetch = require('node-fetch');
 
@@ -32,6 +32,8 @@ export class DuenoMascotaController {
     public duenoMascotaRepository : DuenoMascotaRepository,
     @service(AutenticacionService)
     public servicioAutenticacion : AutenticacionService,
+    @service(NotificacionService)
+    public servicioNotificacion : NotificacionService
   ) {}
 
   @post('/identificarDuenoMascota', {
@@ -83,16 +85,27 @@ export class DuenoMascotaController {
     let claveCifrada = this.servicioAutenticacion.CifrarClave(clave);
     duenoMascota.Clave = claveCifrada;
     let dm = await this.duenoMascotaRepository.create(duenoMascota);
+    if (dm) {
+      let contenido = `Bienvenido al sistema de CLinica Veterinaria.<br>
+      Sus datos de acceso al sistema son<br>
+      <ul>
+        <li>Usuario:${dm.Correo}</li>
+        <li>Contraseña:${clave}</li>
+      </ul>
+      Gracias por registrarte en nuestra plataforma,`;
+      this.servicioNotificacion.SendEmail(dm.Correo, Llaves.subject, contenido);
+    }
+    return dm;
 
     //Notificar al usuario
-    let destino = duenoMascota.Correo;
+    /* let destino = duenoMascota.Correo;
     let asunto = 'Resgistro en la plataforma AnimalPets';
     let contenido = `Hola señor@ ${duenoMascota.Nombres}, estas son sus credenciales de ingreso\nUsuario: ${duenoMascota.Correo}\nContraseña: ${clave}`;
     fetch(`${Llaves.urlServicioNotificaciones}/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenido}`)
       .then((data: any) => {
         console.log(data);
       })
-    return dm;
+    return dm; */
   }
 
   @get('/dueno-mascotas/count')
